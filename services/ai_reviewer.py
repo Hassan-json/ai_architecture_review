@@ -122,3 +122,106 @@ Be specific and actionable in all mitigation strategies. Each mitigation should 
                 "error": str(e),
                 "review": None
             }
+
+    def review_code_flow(self, code, language=None):
+        """
+        Analyze code for flow issues and suggest improvements
+
+        Args:
+            code (str): The source code to analyze
+            language (str, optional): Programming language hint
+
+        Returns:
+            dict: Review results with flow issues, code smells, and suggestions
+        """
+        try:
+            language_hint = f"The code is written in {language}." if language else ""
+
+            prompt = f"""You are an expert code reviewer. Analyze the following code for flow issues, code smells, and suggest improvements.
+
+{language_hint}
+
+Return your analysis as a JSON object with this exact structure:
+
+{{
+  "flowIssues": [
+    {{
+      "location": "line number or function name",
+      "issue": "Description of the flow problem",
+      "impact": "Why this is problematic",
+      "fix": "How to fix it"
+    }}
+  ],
+  "codeSmells": [
+    {{
+      "smell": "Name of the code smell",
+      "location": "Where it occurs",
+      "suggestion": "How to address it"
+    }}
+  ],
+  "suggestions": [
+    {{
+      "title": "Improvement title",
+      "description": "What to improve and why",
+      "codeExample": "Example code snippet if applicable"
+    }}
+  ],
+  "refactoring": [
+    {{
+      "what": "What to refactor",
+      "why": "Why it should be refactored",
+      "how": "Steps to refactor"
+    }}
+  ],
+  "priorityChanges": [
+    {{
+      "priority": 1,
+      "change": "Most important change",
+      "reason": "Why this is priority"
+    }}
+  ]
+}}
+
+Be specific and actionable. Focus on:
+- Control flow complexity (nested conditions, early returns)
+- Error handling patterns
+- Code duplication
+- Function/method length and responsibility
+- Variable naming and scope
+- Potential bugs or edge cases
+- Performance considerations
+
+Here is the code to analyze:
+
+```
+{code}
+```"""
+
+            response = self.client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=4000
+            )
+
+            review_json = response.choices[0].message.content
+            import json
+            review_data = json.loads(review_json)
+
+            return {
+                "success": True,
+                "review": review_data,
+                "model": Config.OPENAI_MODEL
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "review": None
+            }

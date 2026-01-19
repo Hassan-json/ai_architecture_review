@@ -8,5 +8,6 @@ class Config:
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+    ALLOWED_CODE_EXTENSIONS = {'py', 'js', 'ts', 'java', 'go', 'rb', 'php', 'c', 'cpp', 'rs'}
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     OPENAI_MODEL = "gpt-4o-mini"

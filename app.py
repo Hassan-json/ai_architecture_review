@@ -30,6 +30,12 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 
+def allowed_code_file(filename):
+    """Check if file extension is allowed for code files"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_CODE_EXTENSIONS
+
+
 @app.route('/')
 def index():
     """Render the main web UI page"""
@@ -79,6 +85,73 @@ def review_architecture():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/code-review', methods=['POST'])
+def review_code():
+    """
+    API endpoint to review code for flow issues
+    Accepts: multipart/form-data with 'file' (code file) or form data with 'code' (raw text)
+    Returns: JSON with code review results
+    """
+    code = None
+    language = None
+
+    # Check for raw code in form data
+    if 'code' in request.form and request.form['code'].strip():
+        code = request.form['code']
+        language = request.form.get('language')
+    # Check for file upload
+    elif 'file' in request.files:
+        file = request.files['file']
+
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+        if not allowed_code_file(file.filename):
+            return jsonify({
+                'success': False,
+                'error': f'Invalid file type. Allowed types: {", ".join(Config.ALLOWED_CODE_EXTENSIONS)}'
+            }), 400
+
+        try:
+            # Read file content
+            code = file.read().decode('utf-8')
+            # Detect language from extension
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            language_map = {
+                'py': 'Python', 'js': 'JavaScript', 'ts': 'TypeScript',
+                'java': 'Java', 'go': 'Go', 'rb': 'Ruby', 'php': 'PHP',
+                'c': 'C', 'cpp': 'C++', 'rs': 'Rust'
+            }
+            language = language_map.get(ext)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Error reading file: {str(e)}'}), 400
+    else:
+        return jsonify({'success': False, 'error': 'No code or file provided'}), 400
+
+    if not code or not code.strip():
+        return jsonify({'success': False, 'error': 'Empty code provided'}), 400
+
+    try:
+        result = get_reviewer().review_code_flow(code, language)
+
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'Architecture Review API'
+    }), 200
 
 
 if __name__ == '__main__':
